@@ -1,0 +1,81 @@
+/*-- scss:defaults --*/
+// (You can leave this empty if you have no variable overrides)
+
+/*-- scss:rules --*/
+
+/* ---------------------------------------------------------
+   Unified Icon System (FA6 + Bootstrap Icons)
+   --------------------------------------------------------- */
+
+/* Base icon normalization */
+.icon,
+.fa-solid, .fa-regular, .fa-brands,
+.bi {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  color: #003366; /* default blue */
+}
+
+/* ---------------------------------------------------------
+   Size scale (consistent across FA + Bootstrap Icons)
+   --------------------------------------------------------- */
+
+.icon-xs { font-size: 0.75rem; }
+.icon-sm { font-size: 1.0rem; }
+.icon-md { font-size: 1.35rem; }
+.icon-lg { font-size: 1.75rem; }
+.icon-xl { font-size: 2.25rem; }
+
+/* ---------------------------------------------------------
+   Color utilities
+   --------------------------------------------------------- */
+
+.icon-primary { color: #003366; }
+.icon-secondary { color: #555; }
+.icon-muted { color: #999; }
+.icon-success { color: #2e8540; }
+.icon-warning { color: #e5a000; }
+.icon-danger { color: #b30000; }
+
+/* ---------------------------------------------------------
+   Alignment helpers
+   --------------------------------------------------------- */
+
+.icon-inline {
+  margin-right: 0.35rem;
+  position: relative;
+  top: -1px;
+}
+
+/* ---------------------------------------------------------
+   Panel header with icon + title + rule
+   --------------------------------------------------------- */
+
+/* Panel header container */
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Icon + title row */
+.panel-header-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Title styling */
+.panel-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #003366;
+}
+
+/* Local rule (not full width) */
+.panel-header-rule {
+  width: 40%;        /* adjust to taste: 25%, 33%, 50% */
+  border-bottom: 2px solid #e0e4ea;
+}

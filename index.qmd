@@ -1,0 +1,2614 @@
+---
+title: "BCR Quarterly Infographic Brief"
+---
+
+```{r}
+#| label: load-bcr-data
+
+# Set default fallback parameters for running code interactively during
+# development since Quarto params are only passed when rendering the document
+if (
+  !exists(
+    "params"
+  )
+) {
+  params <- list(
+    report_date = "2026-01-01",
+    fiscal_system = "state",
+    period = "quarter",
+    start_date = "2026-01-01",
+    end_date = "2026-03-31",
+    fiscal_period_start = "2026-01-01",
+    fiscal_period_end = "2026-03-31"
+   )
+}
+
+params$start_date <- lubridate::ymd(params$start_date)
+params$end_date   <- lubridate::ymd(params$end_date)
+params$fiscal_period_start <- lubridate::ymd(params$fiscal_period_start)
+params$fiscal_period_end <- lubridate::ymd(params$fiscal_period_end)
+
+
+# Load ETL output
+source(
+  "R/load_data.R"
+)
+
+# Run the function to load BCR data
+#bcr_data <- load_bcr_data()
+```
+
+```{r}
+#| label: filter-bcr-data
+
+# period <- reporting_period(
+#   date = params$report_date,
+#   system = params$fiscal_system,
+#   period = "quarter"
+# )
+# 
+# start_date <- period$start
+# end_date <- period$end
+# 
+# bcr_full_data <- bcr_data$bcr_full_data |>
+#   dplyr::filter(
+#     enrollment_starting_date >= start_date,
+#     enrollment_starting_date <= end_date
+#   )
+```
+
+<!-- # Overall Program Engagement {-#Program Engagement Numbers} -->
+
+```{r bcr-program-engagement-numbers }
+
+
+
+# Calculate the total number of referrals to BCR in the current
+# fiscal period.
+bcr_count_all_program_refs_current_fp <- bcr_full_data %>% 
+  filter(
+    enrollment_starting_date >= params$start_date,
+    enrollment_starting_date <= params$end_date
+  )%>% 
+  tabyl(
+    month_calendar_year_referral
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) %>% 
+  adorn_pct_formatting(
+    digits = 0
+  ) %>% 
+  rename(
+    Month = month_calendar_year_referral,
+    Frequency = n,
+    Percent = percent
+  )
+
+
+#By Quarter
+bcr_refs_engage_by_qtr <- bcr_full_data %>% 
+  filter(
+    !is.na(state_fiscal_quarter_referral),
+    enrollment_starting_date >= params$start_date,
+    enrollment_starting_date <= params$end_date
+  )%>% 
+  mutate(
+    bcr_grant_desc = case_when(
+      is.na(bcr_grant_desc) ~ "Referral Only",
+      TRUE ~ bcr_grant_desc
+    )
+  ) %>% 
+  tabyl(
+    state_fiscal_quarter_referral,
+    bcr_grant_desc
+  ) %>% 
+  adorn_totals(
+    c(
+    "row", 
+    "col"
+    )
+  ) 
+
+#Disaggregate the total number of referrals who report home zip codes in 
+#St. Louis City vs. St. Louis County. "Yes" means they live in the city. If
+#clients live in St. Louis City, they are eligible for MHB and ARPA funds.
+bcr_stl_city_refs_current_fp <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= params$start_date,
+      ref_pathway_date <= params$end_date
+  ) %>% 
+  tabyl(
+    # month_calendar_year_referral,
+    reside_stl_city
+  ) %>% 
+  adorn_totals(
+    "row"
+  )
+
+
+#Count of Referrals by Referral Source
+bcr_count_ref_by_ref_source <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= params$start_date,
+    ref_pathway_date <= params$end_date
+  ) %>% 
+  tabyl(
+    ref_source_type
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) %>% 
+  adorn_pct_formatting(
+    digits = 0
+  ) %>% 
+  rename(
+    "Referral Source" = ref_source_type,
+    Frequency = n,
+    Percent = percent
+  )
+  
+
+#Count of all initial contacts this fiscal period. If a client completes an IC
+# that means they "engaged" with BCR. This is a metric that MHB has looked at in
+# the past.
+bcr_count_all_ics_current_fp <- bcr_full_data %>% 
+  filter(
+    enrollment_starting_date >= params$start_date,
+    enrollment_starting_date <= params$end_date,
+    !is.na(ic_pathway_date)
+    )%>% 
+  tabyl(
+    month_calendar_year_referral,
+    bcr_grant_desc
+  ) %>% 
+  adorn_totals(
+    c( 
+      "row", "col"
+  ) 
+  )
+
+#Count of Referrals Placed Forms completed, meaning the client
+# Achieved the program outcome, this fiscal period.
+bcr_count_rp_forms_current_fp <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= params$start_date,
+      ref_pathway_date <= params$end_date,
+      !is.na(
+        rp_pathway_date
+      )
+  ) %>% 
+  tabyl(
+    month_calendar_year_referral,
+    bcr_grant_desc
+  ) %>% 
+  adorn_totals(
+    c( 
+      "row", "col"
+  ) 
+  )
+
+#Count of the total referrals placed. One client may have multiple referrals
+#placed, so this number should be larger than count_rp_forms
+bcr_count_total_ext_refs_current_fp <- rp_all_long %>% 
+  filter(
+    enrollment_starting_date >= params$fiscal_period_start,
+      enrollment_starting_date <= params$end_date,
+  ) %>% 
+  tabyl(
+  referral_type
+  ) %>% 
+  adorn_totals(
+     c (
+      "row", "col"
+    )
+  ) 
+
+#Count of total referrals by subtype
+bcr_count_rp_by_subtype <- rp_all_long %>% 
+   filter(
+    enrollment_starting_date >= params$fiscal_period_start,
+      enrollment_starting_date <= params$end_date,
+  ) %>% 
+  count(
+    referral_type,
+    referral_subtype,
+    name = "n"
+    )
+
+
+
+  # add referral_type totals
+  # bind_rows(
+  #   rp_all_long %>%
+  #     filter(
+  #       enrollment_starting_date >= "2025-07-01",
+  #       enrollment_starting_date <= "2025-09-30"
+  #     ) %>%
+  #     count(
+  #       referral_type,
+  #       name = "n"
+  #       ) %>%
+  #     mutate(
+  #       referral_subtype = "TOTAL")
+  # ) %>%
+  # # add grand total
+  # bind_rows(
+  #   rp_all_long %>%
+  #     filter(
+  #       enrollment_starting_date >= "2025-07-01",
+  #       enrollment_starting_date <= "2025-09-30"
+  #     ) %>%
+  #     summarise(
+  #       n = n()
+  #       ) %>%
+  #     mutate(
+  #       referral_type = "TOTAL",
+  #       referral_subtype = "TOTAL")
+  # ) %>%
+  # arrange(
+  #   referral_type,
+  #   referral_subtype)
+
+```
+```{r fig-enrollments-by-month}
+bcr_fig_enrollments_by_month_cfp <- bcr_count_all_program_refs_current_fp %>% 
+  filter(`Month` != "Total") %>% 
+  mutate(
+    # Parse Month into real dates
+    Month_date = as.Date(paste0(Month, "-01"), format = "%b %Y-%d"), 
+    # Order factor by date
+    Month = factor(Month, levels = format(sort(unique(Month_date)), "%b %Y"))
+  )
+  
+bcr_fig_enrollments_by_month_cfp <- ggplot(
+  bcr_fig_enrollments_by_month_cfp,
+  aes(x = Month, y = Frequency)
+) +
+  geom_bar(stat = "identity",
+           color = ggthemes::ptol_pal()(12)[2],
+           fill  = ggthemes::ptol_pal()(12)[2]) +
+  geom_text(
+    aes(
+      label = Frequency),
+      vjust = -0.3,  
+      hjust = -0.1)  +
+  labs(
+    title = "Referrals to BCR by Month",
+    x = NULL,
+    y = NULL,
+    fill = NULL) +
+  theme_min_geombar_identity() +
+    theme(
+    axis.text.x = element_text(angle = 0,
+                               hjust = 0.4,
+                               vjust = 4.5,
+                               margin = margin(b = 0)
+                               ), 
+    plot.title = element_text(size = 16,
+                              face = "bold",
+                              margin = margin(b = -2),
+                              hjust = 0.5),
+    plot.title.position = "plot"
+  ) +
+  scale_x_discrete(labels = function(x) {
+    month <- str_extract(x, "^[A-Za-z]+")
+    year <- str_extract(x, "\\d{4}")
+    paste0(month, "\n", year)  # Clean line break without padding
+  }) +  
+  scale_y_continuous(
+    limits = c(0, max(bcr_fig_enrollments_by_month_cfp$Frequency) * 1.2),
+    labels = NULL
+  )
+
+bcr_fig_enrollments_by_month_cfp
+  
+```
+```{r fig-engagements-month-county}
+
+bcr_referrals_by_county_cfp <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= params$start_date &
+      ref_pathway_date <= params$end_date
+  ) %>% 
+  tabyl(
+    month_calendar_year_referral,
+    reside_stl_city
+  )
+
+bcr_city_county_long <- bcr_referrals_by_county_cfp %>% 
+  mutate(
+    month_date = as.Date(
+      paste0(
+        "01 ",
+        month_calendar_year_referral
+        ),
+      format = "%d %b %Y"
+      ),
+    month = fct_reorder(
+      as.character(
+        month_calendar_year_referral
+        ),
+      month_date
+      )
+    ) %>%
+  pivot_longer(
+    cols = c(
+      `Yes`,
+      `No`
+      ),
+    names_to = "geo",
+    values_to = "Frequency"
+  ) %>%
+  mutate(
+    geo = recode(
+      geo,
+      "Yes" = "St. Louis City",
+      "No"  = "St. Louis County"
+      )
+  )
+
+# total referrals for the quarter
+total_referrals <- bcr_city_county_long %>%
+  summarise(
+    total = sum(
+      Frequency,
+      na.rm = TRUE
+      )
+    ) %>%
+  pull(
+    total
+    )
+
+# referrals coming from city
+city_referrals <- bcr_city_county_long %>%
+  filter(
+    geo == "St. Louis City"
+    ) %>%
+  summarise(
+    total = sum(
+      Frequency,
+      na.rm = TRUE
+      )
+    ) %>%
+  pull(
+    total
+    )
+
+pct_city <- city_referrals / total_referrals
+
+
+ref_by_month_county_plot <- bcr_city_county_long %>%
+  arrange(
+    month_date
+    ) %>%
+  mutate(
+    month = fct_reorder(
+      month,
+      month_date
+      )
+    )
+
+ref_by_month_county_totals <- ref_by_month_county_plot %>%
+  group_by(
+    month,
+    month_date
+    ) %>%
+  summarise(
+    total = sum(
+      Frequency,
+      na.rm = TRUE
+      ),
+    .groups = "drop"
+    )
+
+fig_ref_by_month_county <- ggplot(
+  ref_by_month_county_plot,
+  aes(
+    x = month,
+    y = Frequency,
+    fill = geo
+    )
+  ) +
+  geom_col() +
+  # total label above the stack
+  geom_text(
+    data = ref_by_month_county_totals,
+    aes(
+      x = month,
+      y = total,
+      label = total
+      ),
+    inherit.aes = FALSE,
+    vjust = -0.3
+  ) +
+  labs(
+    title = "Engagements with BCR by Month & County of Residence",
+    x = NULL,
+    y = NULL,
+    fill = NULL
+    ) +
+  scale_fill_manual(
+    values = c(
+      "St. Louis City" = "#0B3C5D",
+      "St. Louis County" = "#5DA9E9"
+    )
+  ) +
+    theme_min_geombar_identity() +
+    theme(
+    plot.title = element_text(
+      size = 16,
+      face = "bold",
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    axis.text.x = element_text(
+      angle = 0,
+      hjust = 0.4,
+      vjust = 4.5,
+      margin = margin(
+        b = 0
+        )
+    )
+  ) +
+    scale_x_discrete(
+      labels = function(
+        x
+        ) {
+        month <- str_extract(
+          x,
+          "^[A-Za-z]+"
+          )
+        year  <- str_extract(
+          x,
+          "\\d{4}"
+          )
+        paste0(
+          month,
+          "\n",
+          year
+          )
+      }
+      ) +
+  scale_y_continuous(
+    limits = c(
+      0,
+      max(
+        ref_by_month_county_totals$total
+        ) * 1.2
+      ),
+    labels = NULL
+    )
+
+```
+
+```{r fig-referrals-by-ref-source}
+# Create a bar plot of BCR referrals by month
+bcr_filtered_count_ref_by_ref_source <- bcr_count_ref_by_ref_source %>% 
+  filter(
+    `Referral Source` != "Total"
+  ) %>% 
+  filter(
+    `Referral Source` != "NA"
+  ) %>% 
+  mutate(
+    `Referral Source` = fct_reorder(
+      `Referral Source`, Frequency, .desc = FALSE
+      )
+    )
+
+  bcr_fig_count_ref_by_ref_source <- ggplot(
+  bcr_filtered_count_ref_by_ref_source,
+  aes(
+    x = `Referral Source`, 
+    y = Frequency,
+    label = `Referral Source`
+  )
+) + 
+  labs(
+    title = "Referrals to BCR by Referral Source",
+    x = NULL,
+    y = NULL,
+    fill = NULL
+) +
+  geom_bar(
+    stat = "identity",
+    color = ggthemes::ptol_pal()(12)[2],
+    fill = ggthemes::ptol_pal()(12)[2]
+  ) +
+  coord_flip() + 
+  geom_text(
+    aes(
+      label = Frequency,
+      hjust = -.2
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    fill = NULL
+  ) +
+  theme_min_geombar_identity() + 
+  theme(
+    axis.text.x = element_text(angle = 0,
+                               hjust = 0.4,
+                               vjust = 4.5,
+                               margin = margin(b = -2)
+                               ), 
+    axis.text.y = element_text(margin = margin(r = -7)),
+    plot.title = element_text(size = 12,
+                              face = "bold",
+                              margin = margin(b = 3),
+                              hjust = 0.5),
+    plot.title.position = "plot"
+  ) +
+  scale_y_continuous(
+    limits = c(
+      0,
+      max(
+        bcr_filtered_count_ref_by_ref_source$Frequency
+      ) * 1.3
+    ),
+    labels = NULL
+  ) 
+
+# Build the plot.
+bcr_fig_count_ref_by_ref_source
+
+```
+```{r fig-presenting-concerns}
+bcr_presenting_concerns_ref <- bcr_full_data %>% 
+  filter(
+    enrollment_starting_date >= params$fiscal_period_start,
+    enrollment_starting_date <= params$end_date
+  ) %>% 
+  select(
+    enrollment_starting_date,
+    client_num,
+    ref_pathway_date,
+    bcr_presenting_concerns,
+    behavioral_health_need,
+    housing_need,
+    maternal_health_need,
+    physical_health_need,
+    social_services_need,
+    spiritual_care_need,
+    other_need,
+    other_need_ref
+  )
+
+bcr_pc_summary <- bcr_presenting_concerns_ref %>% 
+  rename(
+    `Behavioral Health` = behavioral_health_need,
+    `Housing` = housing_need,
+    `Maternal Health` = maternal_health_need,
+    `Physical Health` = physical_health_need,
+    `Social Services` = social_services_need,
+    `Spiritual Care` = spiritual_care_need,
+    `Other` = other_need
+  ) %>% 
+  pivot_longer(
+    c(
+    `Behavioral Health`,
+    `Housing`,
+    `Maternal Health`,
+    `Physical Health`,
+    `Social Services`,
+    `Spiritual Care`,
+    `Other`
+    ),
+    names_to = "need_type",
+    values_to = "value"
+  ) %>% 
+  filter(
+    value == 1
+  ) %>% 
+  count(
+    need_type,
+    name = "n"
+  ) %>% 
+  arrange(
+    desc(n)
+  )
+
+fig_bcr_pc <- bcr_pc_summary %>% 
+  ggplot(
+    aes(
+      x = n,
+      y = reorder(
+        need_type,
+        n
+    )
+  )
+  ) +
+  geom_col(
+    color = "#3A9FBF",
+    fill  = "#3A9FBF"
+    ) +
+  geom_text(
+    aes(
+      label = n
+      ),
+    hjust = -0.5,
+    size = 4
+    )+
+  scale_x_continuous(
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+   labs(
+    title = "Presenting Concerns at Referral",
+    x = NULL,
+    y = NULL,
+    fill = NULL
+    ) +
+  theme_min_geombar_identity() +
+    theme(
+    axis.text.y = element_text(
+      size = 11
+      ),
+    axis.text.x = element_blank(), 
+    plot.title = element_blank()
+    #   element_text(
+    #   size = 11,
+    #   face = "bold",
+    #   margin = margin(b = -2),
+    #   hjust = 0.5
+    #   ),
+    # plot.title.position = "plot"
+  )
+
+fig_bcr_pc
+
+```
+
+```{r fig-referrals-placed-by-type}
+# Create a bar plot of BCR referrals by month
+filtered_rp_count <- bcr_count_total_ext_refs_current_fp %>% 
+    filter(
+    referral_type != "Total"
+  ) %>% 
+  rename(
+    `Referral Type` = referral_type,
+    Frequency = n,
+    Percent = percent
+  ) %>% 
+  mutate(
+    `Referral Type` = fct_reorder(
+    `Referral Type`, Frequency, .desc = FALSE
+      )
+  )
+
+
+bcr_fig_rp_by_type <- ggplot(
+filtered_rp_count,
+  aes(
+    x = `Referral Type`, 
+    y = Frequency,
+    label = `Referral Type`
+  )
+) + 
+  labs(
+    title = "Types of Referrals Placed",
+    x = NULL,
+    y = NULL,
+    fill = NULL
+) + 
+  geom_bar(
+    stat = "identity",
+    color = ggthemes::ptol_pal()(12)[2],
+    fill = ggthemes::ptol_pal()(12)[2]
+  ) +
+  coord_flip() + 
+  geom_text(
+    aes(
+      label = Frequency,
+      hjust = -.7
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    fill = NULL
+  ) +
+  theme_min_geombar_identity() + 
+    theme(
+    axis.text.x = element_text(angle = 0,
+                               hjust = 0.4,
+                               vjust = 4.5,
+                               margin = margin(b = -2)
+                               ), 
+    axis.text.y = element_text(margin = margin(r = -7)),
+    plot.title = element_text(size = 12,
+                              face = "bold",
+                              margin = margin(b = 3),
+                              hjust = 0.5),
+    plot.title.position = "plot"
+  ) +
+  scale_y_continuous(
+    limits = c(
+      0,
+      max(
+        filtered_rp_count$Frequency
+      ) * 1.4
+    ),
+    labels = NULL
+  ) +
+  scale_x_discrete(labels = c(
+    "behavioral_health" = "Behavioral Health",
+    "physical_health" = "Physical Health",
+    "maternal_health" = "Maternal Health",
+    "spiritual_care" = "Spiritual Care",
+    "social_services" = "Social Services"
+  ))
+# Build the plot.
+bcr_fig_rp_by_type
+
+```
+
+``` {r fig-ref-placed-faceted-by-type-w-subtypes}
+
+#Since not all types of referrals are placed frequently, the top three most 
+#common are selected. 
+bcr_count_rp_by_type_subtypes <- bcr_count_rp_by_subtype %>% 
+  filter(
+    referral_type != "other",
+    referral_subtype != "TOTAL",
+    n >= 1
+    ) %>% 
+  mutate(
+    referral_type = dplyr::recode(
+      referral_type,
+    "behavioral_health" = "Behavioral Health",
+    "physical_health" = "Physical Health",
+    "social_services" = "Social Services",
+    "housing" = "Housing"
+    )
+  ) %>% 
+  mutate(
+    referral_subtype = dplyr::recode(
+      referral_subtype,
+    "cmhc_ref_placed" = "CMHC",
+    "counseling_ref_placed" = "Counseling",
+    "group_peer_support_ref_placed" = "Group Peer Support",
+    "su_ref_placed" = "Substance Use",
+    "individual_peer_support_ref_placed" = "Indiv. Peer Support",
+    "child_care_ref_placed" = "Child Care",
+    "dv_ref_placed" = "DV",
+    "employment_ref_placed" = "Employment",
+    "food_ref_placed" = "Food",
+    "insurance_ref_placed" = "Insurance",
+    "legal_ref_placed" = "Legal",
+    "transport_ref_placed" = "Transportation",
+    "furniture_ref_placed" = "Furniture",
+    "home_repair_ref_placed" = "Home Repair",
+    "homeless_services_ref_placed" = "Homeless Services",
+    "rent_assist_ref_placed" = "Rental Assist.",
+    "utility_assist_ref_placed" = "Utility Assist.",
+    "primary_care_ref_placed" = "Primary Care",
+    "dental_ref_placed" = "Dental"
+    )
+  ) %>%
+  group_by(
+    referral_type
+    ) %>% 
+  mutate(
+    type_total = sum(n, na.rm = TRUE)
+    ) %>% 
+  ungroup() %>% 
+  mutate(
+    referral_type = forcats::fct_reorder(
+      referral_type,
+      type_total,
+      .desc = TRUE
+      )
+  ) %>% 
+  mutate(
+    referral_subtype = stringr::str_wrap(
+      referral_subtype,
+      width = 10
+      )
+    ) %>% 
+  mutate(
+    referral_subtype = forcats::fct_reorder(
+      referral_subtype,
+      n
+      )
+  )
+
+bcr_fig_rp_type_subtypes <- ggplot(
+  bcr_count_rp_by_type_subtypes %>% 
+  filter(
+    referral_subtype != "TOTAL"
+    ),
+  aes(
+    x = referral_subtype,
+    y = n,
+    fill = referral_type)
+) +
+  geom_col() +
+  coord_flip() +
+  facet_grid(
+  rows = vars(referral_type),
+  scales = "free_y",
+  switch = "y"
+)+
+  labs(
+    title = "Number of Referrals by Type and Subtype",
+    x = element_blank(),
+    y = element_blank(),
+    fill = "Referral Type"
+  ) +
+  geom_text(
+    aes(label = n),
+    hjust = -0.1,
+    size = 3
+  )+
+  scale_fill_viridis_d(
+  option = "D",
+  begin = 0.2,# trims yellow/green
+  end = 0.7  # stays in blue/purple range
+)+
+  theme_min_geombar_identity() +
+    theme(
+    plot.title = element_text(
+    size = 14,
+    face = "bold",
+    hjust = -1.25
+  ),
+    legend.position = "none",
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(
+      size = 10
+      ),
+    strip.text = element_text(
+      size = 12,
+      face = "bold"
+      ) ,
+    strip.text.y.left = element_text(
+    angle = 0,
+    hjust = 0,   # left align
+    vjust = 0.5,
+    size = 10,
+    face = "bold"
+  ),
+    strip.placement = "outside",
+   strip.background = element_blank()
+   ) 
+
+bcr_fig_rp_type_subtypes
+
+```
+
+
+
+```{r bcr-fig-rp-top-subtypes}
+#Creates list of the top 10 subtypes of referrals placed
+bcr_count_top10_subtypes <- bcr_count_rp_by_subtype %>% 
+  filter(
+    referral_subtype != "TOTAL",
+    referral_subtype != "other_ref_placed"
+    ) %>%
+  arrange(
+    desc(n)
+    ) %>%                           
+  slice_head(
+    n = 10
+    ) %>% 
+  mutate(referral_subtype = dplyr::recode(referral_subtype,
+    "cmhc_ref_placed" = "CMHC",
+    "counseling_ref_placed" = "Counseling",
+    "group_peer_support_ref_placed" = "Group Peer Support",
+    "su_ref_placed" = "Substance Use",
+    "individual_peer_support_ref_placed" = "Indiv. Peer Support",
+    "child_care_ref_placed" = "Child Care",
+    "dv_ref_placed" = "DV",
+    "employment_ref_placed" = "Employment",
+    "food_ref_placed" = "Food",
+    "insurance_ref_placed" = "Insurance",
+    "legal_ref_placed" = "Legal",
+    "transport_ref_placed" = "Transportation",
+    "furniture_ref_placed" = "Furniture",
+    "home_repair_ref_placed" = "Home Repair",
+    "homeless_services_ref_placed" = "Homeless Services",
+    "rent_assist_ref_placed" = "Rental Assist.",
+    "utility_assist_ref_placed" = "Utility Assist.",
+    "primary_care_ref_placed" = "Primary Care",
+     )) 
+
+bcr_fig_top_subtypes <- bcr_count_top10_subtypes %>%
+ggplot(
+       aes(
+         x = reorder(referral_subtype, n),
+         y = n
+         # fill = referral_type
+       )
+      ) +
+    geom_col(stat = "identity",
+           color = ggthemes::ptol_pal()(12)[2],
+           fill  = ggthemes::ptol_pal()(12)[2]) +
+    geom_text(
+    aes(
+      label = n,
+      hjust = -.7
+    )
+  ) +
+  coord_flip() +
+  labs(
+    title = "Most Frequent Referral Subtypes",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_min_geombar_identity() +
+  theme(
+    axis.text.x = element_blank(), 
+    axis.text.y = element_text(margin = margin(r = -10)),
+    plot.title = element_text(size = 12,
+                              face = "bold",
+                              margin = margin(b = 3),
+                              hjust = 0.5),
+    plot.title.position = "plot"
+  ) +
+scale_y_continuous(
+  limits = c(0, max(bcr_count_top10_subtypes$n) * 1.2)
+)
+
+
+bcr_fig_top_subtypes
+
+```
+
+```{r zzz-fig-rp-top-subtypes-overall}
+#Creates list of the top 10 subtypes of referrals placed
+bcr_count_top10_subtypes <- bcr_count_rp_by_subtype %>% 
+  filter(
+    referral_subtype != "TOTAL",
+    referral_subtype != "other_ref_placed"
+    ) %>%
+  arrange(
+    desc(n)
+    ) %>%                           
+  slice_head(
+    n = 10
+    ) %>% 
+  mutate(referral_subtype = dplyr::recode(referral_subtype,
+    "cmhc_ref_placed" = "CMHC",
+    "counseling_ref_placed" = "Counseling",
+    "group_peer_support_ref_placed" = "Group Peer Support",
+    "su_ref_placed" = "Substance Use",
+    "individual_peer_support_ref_placed" = "Indiv. Peer Support",
+    "child_care_ref_placed" = "Child Care",
+    "dv_ref_placed" = "DV",
+    "employment_ref_placed" = "Employment",
+    "food_ref_placed" = "Food",
+    "insurance_ref_placed" = "Insurance",
+    "legal_ref_placed" = "Legal",
+    "transport_ref_placed" = "Transportation",
+    "furniture_ref_placed" = "Furniture",
+    "home_repair_ref_placed" = "Home Repair",
+    "homeless_services_ref_placed" = "Homeless Services",
+    "rent_assist_ref_placed" = "Rental Assist.",
+    "utility_assist_ref_placed" = "Utility Assist.",
+    "primary_care_ref_placed" = "Primary Care",
+     )) 
+
+bcr_fig_top_subtypes <- bcr_count_top10_subtypes %>%
+ggplot(
+       aes(
+         x = reorder(referral_subtype, n),
+         y = n,
+         fill = referral_type
+       )
+      ) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(~ referral_type, scales = "free_y") +
+  labs(
+    title = "Top 10 Referral Subtypes",
+    x = "Referral Subtype",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    axis.text.y = element_text(size = 9)
+  )
+
+bcr_fig_top_subtypes
+
+##Another Attempt
+bcr_fig_subtypes_by_type_one_chart <- bcr_count_top10_subtypes %>%
+  ggplot(
+    aes(
+      x = reorder(referral_subtype,referral_type),
+      y = n,
+      fill = referral_type
+    )
+  ) +
+  geom_col(position = position_dodge()) +
+  coord_flip() +
+  labs(
+    title = "Top 10 Referral Subtypes Grouped by Type",
+    x = "Referral Subtype",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    axis.text.y = element_text(size = 9)
+  )
+
+bcr_fig_subtypes_by_type_one_chart
+
+#Take 3
+# Optional: manually set the order of subtypes
+ordered_subtypes <- c(
+  "counseling_ref_placed",
+  "group_peer_support_ref_placed",
+  "primary_care_ref_placed",
+  "food_ref_placed",
+  "transportation_ref_placed",
+  "employment_ref_placed",
+  "rent_assist_ref_placed",
+  "homeless_services_ref_placed",
+  "utilities_assist_ref_placed",
+  "home_repair_ref_placed"
+)
+
+# Apply ordering
+bcr_count_top10_subtypes_ordered <- bcr_count_top10_subtypes %>%
+  mutate(referral_subtype = factor(referral_subtype, levels = ordered_subtypes))
+
+# Plot
+bcr_fig_top_subtypes_ordered <- ggplot(
+  bcr_count_top10_subtypes_ordered,
+  aes(
+    x = referral_subtype,
+    y = n,
+    fill = referral_type
+  )
+) +
+  geom_col(
+    width = 0.7) +
+  coord_flip() +
+  labs(
+    title = "Top 10 Referral Subtypes Grouped by Type",
+    x = "Referral Subtype",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    axis.text.y = element_text(size = 9)
+  )
+
+# Print the plot
+print(bcr_fig_top_subtypes_ordered)
+
+
+```
+```{r fig-bcr-eng-clients-by-grant}
+bcr_clients_by_grant <- bcr_full_data %>%
+  filter(
+    ref_pathway_date >= params$start_date,
+      ref_pathway_date <= params$end_date,
+    !is.na(bcr_grant_desc)
+    ) %>%
+  tabyl(
+    state_fiscal_quarter_referral,
+    bcr_grant_desc
+  ) %>%
+  adorn_totals(
+    where = c(
+      "row", "col")
+  ) %>%
+  as_tibble() %>%
+  rename(
+    Quarter = state_fiscal_quarter_referral
+  )
+
+nrow_bcr_clients_by_grant <- nrow(bcr_clients_by_grant)
+
+bcr_clients_by_grant |> 
+   kable(
+    align = c("r", "c", "c", "c", "c"),
+    caption = "<div style='
+         text-align:center;
+         font-size:16px;
+         font-weight:550;
+         color: #1F3A5F;
+         margin-bottom:5px;
+       '>Quarterly Engagement by Grant</div>",
+    escape = FALSE
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  ) %>%
+  row_spec(
+    0,
+    bold = TRUE,
+    background = "#A4E0F4"
+  ) %>%
+  row_spec(
+    0:nrow_bcr_clients_by_grant - 1,
+    extra_css = "padding-left: 20px;"
+    )%>%
+  row_spec(
+    nrow_bcr_clients_by_grant,
+    bold = TRUE
+  )
+
+bcr_clients_by_grant
+
+#Separate table showing clients without a grant assigned, likely "Referral Only"
+bcr_na_grants <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= params$start_date,
+    ref_pathway_date <= params$end_date,
+    is.na(bcr_grant_desc)
+  ) %>% 
+  summarize(`Not Assigned (N)` = n()) %>% 
+  mutate(Period = "FY 2026") %>% 
+  select(Period, `Not Assigned (N)`)
+
+# If the table is empty, print a message instead of styling
+if (nrow(bcr_na_grants) == 0) {
+  bcr_na_grants_kable <- "No referrals without a grant assignment for this period."
+} else {
+
+  n_rows <- nrow(bcr_na_grants)
+
+  bcr_na_grants_kable <- bcr_na_grants %>% 
+    kable(
+      align = c("l", "c"),
+      caption = "Referrals, No Grant Assigned",
+      escape = FALSE
+    ) %>% 
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = FALSE,
+      position = "left"
+    ) %>% 
+    row_spec(0, bold = TRUE, background = "#F2F4F7") %>% 
+    row_spec(1:n_rows, extra_css = "padding-left: 20px;")
+}
+
+bcr_na_grants_kable
+
+```
+```{r fig-bcr-all-ref-eng-grant}
+fig_bcr_refs_engage_by_qtr <- bcr_refs_engage_by_qtr %>% 
+  as_tibble() %>% 
+  rename(
+    Quarter = state_fiscal_quarter_referral
+  )
+
+nrow_bcr_refs_engage <- nrow(fig_bcr_refs_engage_by_qtr)
+
+fig_bcr_refs_engage_by_qtr %>% 
+   kable(
+    align = c("c", "c", "c", "c", "c"),
+    caption = "<div style='
+         text-align:center;
+         font-size:16px;
+         font-weight:550;
+         color: #1F3A5F;
+         margin-bottom:5px;
+       '>Quarterly Referrals & Engagement by Grant</div>",
+    escape = FALSE
+  ) |> 
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  ) %>% 
+  row_spec(
+    0,
+    bold = TRUE,
+    background = "#A4E0F4"
+  ) %>% 
+  row_spec(
+    0:nrow_bcr_refs_engage,
+    extra_css = "padding-left: 20px;"
+    ) %>% 
+  row_spec(
+    nrow_bcr_refs_engage,
+    bold = TRUE
+  )
+
+fig_bcr_refs_engage_by_qtr
+
+#Engagement Rate by Quarter
+
+```
+
+```{r fig-bcr-engagement-rate-qtr}
+engagement_by_qtr <- bcr_refs_engage_by_qtr %>% 
+  as.tibble() %>% 
+  filter(
+    state_fiscal_quarter_referral != "Total"
+    ) %>% 
+  mutate(
+    engaged = rowSums(across(c(ARPA, DMH, MHB)), na.rm = TRUE),
+    engagement_rate = engaged / Total
+  ) 
+
+fig_engagement_by_qtr <-
+  ggplot(
+  engagement_by_qtr,
+  aes(
+    x = factor(state_fiscal_quarter_referral),
+    y = engagement_rate
+  )
+) +
+  geom_point(
+    size = 6,
+    color = "#5DA9E9"
+  ) +
+  geom_line(
+    group = 1,
+    color = "#5DA9E9",
+    linewidth = 1
+  ) +
+  geom_text(
+    aes(label = scales::percent(engagement_rate, accuracy = 0.1)),
+    vjust = -0.8,
+    size = 5
+  ) +
+  scale_y_continuous(
+    labels = scales::percent,
+    limits = c(0, 1.2)
+  ) +
+  labs(
+    x = element_blank(),
+    y = element_blank(),
+    title = "Engagement Rate by Quarter"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      hjust = 0.5,
+      face = "bold",
+      size = 16,
+      color = "#1F3A5F",
+      margin = margin(b = 20)
+    ),
+    panel.grid = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(
+      size = 14
+    )
+  )
+
+fig_engagement_by_qtr
+
+```
+
+
+
+```{r zzz-bcr-fig-rp-top-subtypes-clustered}
+## 1) pick the overall top 10 subtypes (ignore TOTAL)
+ top10_subs <- bcr_count_rp_by_subtype %>%
+   filter(
+     referral_subtype != "TOTAL",
+     referral_subtype != "other_ref_placed"
+     ) %>%
+   arrange(desc(n)) %>%
+   slice_head(n = 10) %>%
+   pull(referral_subtype)
+
+## 2) keep only those subtypes and drop TOTAL rows
+ plot_df <- bcr_count_rp_by_subtype %>%
+   filter(referral_subtype %in% top10_subs,
+          referral_subtype != "TOTAL",
+          referral_type    != "TOTAL",
+          referral_subtype != "other_ref_placed"
+          ) %>%
+   # order types by their summed count (within these top subtypes)
+   group_by(referral_type) %>%
+   mutate(type_total = sum(n)) %>%
+   ungroup() %>%
+   mutate(referral_type = fct_reorder(referral_type, type_total, .desc = TRUE))
+
+## 3) grouped (clustered) bar chart: x = type, bars = subtypes
+ bcr_fig_subtypes_by_type <- ggplot(
+   plot_df,
+   aes(
+     x = referral_type,
+     y = n,
+     fill = referral_subtype)
+ ) +
+   geom_col(
+     position = position_dodge(width = 0.8),
+     width = 0.9) +
+   coord_flip() +
+   # labels on bars (optional)
+   geom_text(aes(label = n),
+             position = position_dodge(width = 0.8),
+             vjust = -0.4, size = 3) +
+   labs(
+     title = "Top 10 Referral Subtypes (clustered by Type)",
+     x = "Referral Type",
+     y = "Count",
+     fill = "Subtype"
+   ) +
+   theme_minimal(base_size = 12) +
+   theme(legend.position = "bottom") +
+   # if labels collide, use one (or both) of these:
+   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+   # + scale_x_discrete(guide = guide_axis(n.dodge = 2))  # if you have ggplot2 ≥ 3.3
+
+bcr_fig_subtypes_by_type
+
+
+# 1) Pick the overall top 10 subtypes (ignore TOTAL and other_ref_placed)
+# top10_subs <- bcr_count_rp_by_subtype %>%
+#   filter(
+#     referral_subtype != "TOTAL",
+#     referral_subtype != "other_ref_placed"
+#   ) %>%
+#   arrange(desc(n)) %>%
+#   slice_head(n = 10) %>%
+#   pull(referral_subtype)
+# 
+# # 2) Filter dataset to keep only top 10 subtypes and valid types
+# plot_df <- bcr_count_rp_by_subtype %>%
+#   filter(
+#     referral_subtype %in% top10_subs,
+#     referral_subtype != "TOTAL",
+#     referral_type != "TOTAL",
+#     referral_subtype != "other_ref_placed"
+#   ) %>%
+#   group_by(referral_type) %>%
+#   mutate(type_total = sum(n)) %>%
+#   ungroup() %>%
+#   mutate(
+#     referral_type = fct_reorder(referral_type, type_total, .desc = TRUE),
+#     referral_subtype = fct_reorder(referral_subtype, n)
+#   )
+# 
+# # 3) Plot: Faceted horizontal bars with direct subtype labels
+# bcr_fig_subtypes_by_type <- ggplot(
+#   plot_df,
+#   aes(x = referral_subtype, y = n, fill = referral_subtype)
+# ) +
+#   geom_col(width = 0.7) +
+#   geom_text(
+#     aes(label = referral_subtype),
+#     position = position_stack(vjust = 0.7),
+#     size = 3,
+#     color = "black"
+#   ) +
+#   facet_wrap(~ referral_type, scales = "fixed") +
+#   coord_flip() +
+#   labs(
+#     title = "Top 10 Referral Subtypes (Faceted by Type)",
+#     x = "Referral Subtype",
+#     y = "Count"
+#   ) +
+#   theme_minimal(base_size = 12) +
+#   theme(
+#     legend.position = "none",
+#     strip.text = element_text(face = "bold"),
+#     axis.text.y = element_blank(),  # hide y-axis labels since we label bars directly
+#     axis.ticks.y = element_blank()
+#   )
+# 
+# # Print the plot
+# print(bcr_fig_subtypes_by_type)
+
+
+```
+
+
+
+
+<!-- # ARPA -->
+```{r arpa-counts}
+#Count of ARPA clients per month. ARPA is on a different fiscal year
+#calendar, so the dates will be different than previous counts. Grant isn't
+#assigned until IC. So this count represents clients that engaged with the
+#program. ARPA eligible referrals, may be found by calculating referrals
+# that are city residents. This will overlap with MHB eligible referrals. 
+arpa_bcr_count_refs_by_month <- bcr_full_data %>% 
+  filter(
+    enrollment_starting_date >= params$fiscal_period_start,
+      enrollment_starting_date <= params$fiscal_period_end
+  ) %>% 
+  filter(
+    bcr_grant_desc == "ARPA"
+  ) %>% 
+  tabyl(
+    month_calendar_year_referral
+  ) %>% 
+  adorn_totals(
+    "row", "col"
+  ) 
+
+#Count of ARPA clients connected to a Mental Health or related service,
+#measured by the completion of a Referrals Placed form. 
+arpa_bcr_count_rp_by_month <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= params$fiscal_period_start,
+      ref_pathway_date <= params$fiscal_period_end,
+      !is.na(
+        rp_pathway_date
+      )
+  ) %>% 
+  filter(
+    bcr_grant_desc == "ARPA"
+  ) %>% 
+  tabyl(
+    month_calendar_year_referral
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) 
+
+#Count of total referrals placed for ARPA clients
+#Use long table to get distinct count of referrals. 
+##arpa_bcr_total_ref_placed <- bcr_full_data %>% 
+  # filter(
+  #   enrollment_starting_date >= "2024-11-01" &
+  #   enrollment_starting_date <= "2025-06-30" &
+  #     !is.na(
+  #       rp_pathway_date
+  #     )
+  # ) %>% 
+  # filter(
+  #  bcr_grant_desc == "ARPA"
+  # ) %>%
+  # tabyl(
+  #   month_calendar_year_referral
+  # ) %>% 
+  # adorn_totals(
+  #   "row"
+  # ) 
+ 
+#Count of ARPA clients with a referral placed for Counseling
+arpa_bcr_total_counseling_ref_placed <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= params$fiscal_period_start,
+    ref_pathway_date <= params$fiscal_period_end,
+      !is.na(
+        rp_pathway_date
+      )
+  ) %>% 
+  filter(
+   bcr_grant_desc == "ARPA",
+   bh_ref_placed == 1,
+   counseling_ref_placed == 1
+  ) %>% 
+  tabyl(
+    counseling_ref_placed
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) 
+
+
+#Count of ARPA Paid Counseling Sessions. Comes from Client Counseling Sessiosn
+#Table
+
+arpa_bcr_count_arpa_counseling_clients <- bcr_ccs %>% 
+    filter(
+    session_date >= "2025-11-01",
+    session_date <= "2026-04-30"
+  ) %>% 
+  filter(
+   session_grant == "ARPA"
+ ) %>% 
+  tabyl(
+    client_number
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) 
+
+
+
+```
+
+
+``` {r table-arpa}
+# Table set up
+# 1. Total connected to MH or related service
+
+mh_connected_total <- arpa_bcr_count_rp_by_month %>%
+  filter(month_calendar_year_referral == "Total") %>%
+  pull(n)
+
+# 2. Total attending counseling service
+counseling_total <- arpa_bcr_count_arpa_counseling_clients %>%
+  filter(client_number != "Total") %>%
+  nrow()
+
+# 3. Total ARPA counseling sessions
+sessions_total <- arpa_bcr_count_arpa_counseling_clients %>%
+  filter(client_number == "Total") %>%
+  pull(n)
+
+arpa_actuals <- tibble::tribble(
+  ~Outcome, ~Actual,
+  "Number of Individuals Conntected to Mental Health or Related Service", mh_connected_total,
+  "Number of Individuals Attending a Counseling Service", counseling_total,
+  "Number of ARPA Paid Counseling Sessions Attended", sessions_total
+)
+
+arpa_goals <- tibble::tribble(
+  ~Outcome, ~`Annual Goal`,
+  "Number of Individuals Conntected to Mental Health or Related Service", 90,
+  "Number of Individuals Attending a Counseling Service", 50,
+  "Number of ARPA Paid Counseling Sessions Attended", NA
+  # "Number of Adults Attended Medicaid Expansion Training", 50
+)
+
+arpa_results <- arpa_actuals %>%
+  left_join(arpa_goals, by = "Outcome") %>%
+  mutate(
+    PctAnnualGoal = scales::percent(Actual / `Annual Goal`, accuracy = 1)
+  )
+
+arpa_results %>%
+  knitr::kable(
+    caption = "ARPA Outcomes",
+    booktabs = TRUE,
+    format.args = list(
+      big.mark = ","
+    ),
+    linesep = ""
+  ) %>% 
+  kable_styling(
+    latex_options = c(
+      "HOLD_position",
+      "scale_down"
+    )
+  ) %>% 
+  # hold_position is generally important to ensure that tables show up where you
+  # want them. Otherwise, they can float to wherever LaTeX decides it wants to
+  # put them, which may not be appropriate.
+  row_spec(
+    0,
+    bold = TRUE,
+    color = "white",
+    background = okabe_ito_palette[6]
+  )
+
+arpa_results
+
+```
+
+
+<!-- #MHB  -->
+```{r mhb-counts}
+#Count of MHB clients
+
+mhb_bcr_count_refs_by_month <- bcr_full_data %>% 
+  filter(
+    enrollment_starting_date >= params$fiscal_period_start &
+      enrollment_starting_date <= params$fiscal_period_end
+  ) %>% 
+  filter(
+    bcr_grant_desc == "MHB"
+  ) %>% 
+  tabyl(
+    month_calendar_year_referral
+  ) %>% 
+  adorn_totals(
+    "row", "col"
+  ) 
+
+#Count of Completed PHQ9 Depression Screenings
+# mhb_bcr_count_phq9s <- bcr_full_data %>% 
+#   filter(
+#     enrollment_starting_date >= "2025-07-01" &
+#       enrollment_starting_date <= "2025-12-30"
+#   ) %>% 
+#   filter(
+#     bcr_grant_desc == "MHB",
+#     phq9_completed == "Yes"
+#   ) %>% 
+#   tabyl(
+#     month_calendar_year_referral,
+#     phq9_completed
+#   ) %>% 
+#   adorn_totals(
+#     "row"
+#   )
+
+# mhb_phq9_total <- mhb_bcr_count_phq9s %>%
+#   filter(phq9_completed == "Total") %>%
+#   pull(n)
+
+
+#Count of MHB clients who completed an IC
+mhb_bcr_count_ic_by_month <- bcr_full_data %>% 
+  filter(
+    enrollment_starting_date >= params$fiscal_period_start &
+      enrollment_starting_date <= params$fiscal_period_end &
+      !is.na(
+        ic_pathway_date
+      )
+  ) %>% 
+  filter(
+    bcr_grant_desc == "MHB"
+  ) %>% 
+  tabyl(
+    month_calendar_year_referral
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) 
+
+mhb_engaged_total <- mhb_bcr_count_ic_by_month %>%
+  filter(month_calendar_year_referral == "Total") %>%
+  pull(n)
+
+#Count of MHB clients who completed a referrals placed form. 
+mhb_bcr_count_rp_by_month <- bcr_full_data %>% 
+  filter(
+    enrollment_starting_date >= params$fiscal_period_start,
+      enrollment_starting_date <= params$fiscal_period_end, 
+      !is.na(
+        rp_pathway_date
+      )
+  ) %>% 
+  filter(
+    bcr_grant_desc == "MHB"
+  ) %>% 
+  tabyl(
+    month_calendar_year_referral
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) 
+
+mhb_connected_total <- mhb_bcr_count_rp_by_month %>%
+  filter(month_calendar_year_referral == "Total") %>%
+  pull(n)
+
+
+#Screening Events
+
+mhb_events <- bcr_events %>% 
+  filter(
+    pathway_date >= params$start_date,
+    event_type == "Screening"
+  ) %>% 
+  select(
+    -visitdt,
+    -visittm,
+    -parent_docserno,
+    -event_topic,
+    -if_other_explain,
+    -federal_fiscal_quarter,
+    -federal_fiscal_year_two_digits,
+    -federal_fiscal_year,
+    -federal_fiscal_year_qtr,
+    -federal_fiscal_year_qtr_string,
+    -federal_month_fiscal_year,
+    -federal_fiscal_month_num,
+    -federal_fiscal_year_month_num
+  )
+
+```
+
+```{r tab-mhb-metrics, eval = FALSE}
+#Not functional yet. We don't have a way to know how many completed screens?
+mhb_actuals <- tibble::tribble(
+  ~Outcome, ~Actual,
+  "Completed PHQ9 Depression Screens", mhb_phq9_total,
+  "Clients Who Engaged With BCR", mhb_engaged_total,
+  "Clients Who Achieved Outcome", mhb_connected_total
+)
+
+mhb_goals <- tibble::tribble(
+  ~Outcome, ~`Annual Goal`,
+  "Completed PHQ9 Depression Screens", 125,
+  "Clients Who Engaged With BCR", 75,
+  "Clients Who Achieved Outcome", 60
+)
+
+mhb_results <- mhb_actuals %>%
+  left_join(mhb_goals, by = "Outcome") %>%
+  mutate(
+    PctAnnualGoal = scales::percent(Actual / `Annual Goal`, accuracy = 1)
+  )
+
+#Next Steps
+#MHB events table?
+
+```
+
+
+```{r MHB Participant Workbook, eval = FALSE}
+#This creates a table that will later be exported to excel for MHB. MHB requires certain category names that differ from the categories that BHN uses, including gender and race. This section uses mutate() to rename categories. Then select() is used to pull out only the columns that are neeeded for MHB's report. Filtered by which_grant_one to only include clients identified as MHB clients at initial contact. Filtered by date to limit participants from this past quarter. 
+bcr_participant_workbook_current_fp <- bcr_ref_ic_rp_parties %>% 
+  mutate(
+    client_status = case_when(
+      program_participation_bcr_ref =="Unable to Contact" ~ "Inactive",
+      program_participation_bcr_ref =="Ineligible" ~ "Inactive",
+      program_participation_bcr_ref =="Declined Services" ~ "Inactive",
+      program_participation_bcr_ref =="Referred to Alternative Services" ~ "Inactive",
+      program_participation_bcr_ref == "Eligible" &
+      !is.na(date_taken_rp) ~ "Achieved",
+      .default = "Active"
+    )
+  ) %>% 
+  mutate(
+    homeless_mhb_def = case_when(
+      housing_stable_ic == "Yes" ~ "No",
+      housing_stable_ic == "No" ~ "Yes",
+      .default = NA
+    )
+  ) %>% 
+  mutate(
+    mhb_sex = case_when(
+      sex == "Cisgender Man" ~ "Male",
+      sex == "Cisgender Woman" ~ "Female",
+      .default = "Decline to disclose"
+    )
+  ) %>% 
+  mutate(
+    mhb_race = case_when(
+      race_recode == "Black or African American" ~ "Black/African American",
+      race_recode == "White" ~ "White/Caucasian",
+      race_recode == "Multiracial" ~ "Bi-Racial/Multi-Racial",
+      .default = "Decline to disclose"
+    )
+  ) %>% 
+  select(
+    case_num,
+    dob,
+    zip_code,
+    homeless_mhb_def,
+    zip_of_initial_contact,
+    mhb_sex,
+    mhb_race,
+    ethnicity,
+    date_taken_referral,
+    client_status,
+    date_taken_rp,
+    which_grant_one
+  ) %>% 
+  filter(
+    date_taken_referral >= "2024-07-01" &
+      date_taken_referral <= "2024-12-31"
+  ) %>% 
+  filter(
+    which_grant_one == "MHB"
+  )
+
+#Creates an excel file of the MHB workbook
+# openxlsx::write.xlsx(
+#  bcr_participant_workbook_current_fp,
+#  file = paste0(
+#    "P:/DATA/Data Files/_BCR_data/bcr_participant_workbook_current_fp_",
+#    Sys.Date(),
+#    ".xlsx"
+#  )
+# )
+
+case_management_list_mhb <- bcr_ref_ic_rp_parties %>% 
+  mutate(
+    mhb_sex = case_when(
+      sex == "Cisgender Man" ~ "Male",
+      sex == "Cisgender Woman" ~ "Female",
+      .default = "Decline to disclose"
+    )
+  ) %>% 
+  mutate(
+    mhb_race = case_when(
+      race_recode == "Black or African American" ~ "Black/African American",
+      race_recode == "White" ~ "White/Caucasian",
+      race_recode == "Multiracial" ~ "Bi-Racial/Multi-Racial",
+      .default = "Decline to disclose"
+    )
+  ) %>% 
+  select(
+    case_num,
+    participant_last_name,
+    participant_first_name,
+    date_taken_referral,
+    program_participation_bcr_ref,
+    date_taken_rp,
+    which_grant_one
+  ) %>% 
+  filter(
+    date_taken_referral >= "2024-07-01" &
+      date_taken_referral <= "2024-12-31"
+  ) %>% 
+  filter(
+    which_grant_one == "MHB"
+  )
+
+```
+
+
+<!-- # BCR Screening and Training Events {-#BCR Events} -->
+
+```{r bcr-event-data }
+# Calculate the total number of BCR events by topic in the current fp
+bcr_all_event_topic_current_fp <- bcr_events %>% 
+  filter(
+       pathway_date >= params$fiscal_period_start,
+      pathway_date <= params$fiscal_period_end
+  ) %>% 
+  select(
+    -id,
+    -userid,
+    -docserno,
+    -visitdt,
+    -visittm,
+    -parent_docserno,
+    -event_location,
+    -event_grant_code
+  )
+
+
+
+# Calculate the total number of BCR events by type in the current fp
+bcr_all_event_types_current_fp <- bcr_events %>% 
+  filter(
+       pathway_date >= params$fiscal_period_start,
+      pathway_date <= params$fiscal_period_end
+  ) %>%  
+  tabyl(
+    event_type
+  ) %>% 
+  adorn_totals(
+    c(
+      "row",
+      "col"
+    )
+  ) 
+
+# Calculate number of attendees for BCR Screening events in the current fp
+bcr_screening_attendees_current_fp <- bcr_events %>% 
+  filter(
+       pathway_date >= params$fiscal_period_start,
+      pathway_date <= params$fiscal_period_end,
+        event_type == "Screening"
+  ) %>% 
+  select(
+    pathway_date ,
+    event_topic,
+    total_num_attendees,
+    num_adults,
+    num_youth,
+    num_pastors,
+    num_requested_fu,
+    num_completed_screens
+  ) %>% 
+  adorn_totals(
+  )
+
+# Calculate number of attendees for BCR SAMHSA Training events in the current fp
+bcr_training_attendees_current_fp <- bcr_events %>% 
+  filter(
+       pathway_date >= params$fiscal_period_start,
+      pathway_date <= params$fiscal_period_end,
+        event_type == "Training"
+  ) %>% 
+  select(
+    pathway_date,
+    event_topic,
+    total_num_attendees,
+    num_adults,
+    num_youth,
+    num_pastors,
+    num_requested_fu,
+    num_inc_knowledge,
+    event_grant_description,
+    federal_month_fiscal_year
+  ) %>% 
+  adorn_totals(
+  )
+
+# Calculate number of attendees for ARPA Medicaid events in the current fp
+bcr_medicaid_attendees_current_fp <- bcr_events %>% 
+  filter(
+       pathway_date >= "2025-11-01" &
+      pathway_date <= "2026-03-31",
+        event_topic == "Medicaid"
+  ) %>% 
+  select(
+    pathway_date,
+    event_topic,
+    total_num_attendees,
+    num_adults,
+    num_youth,
+    num_pastors,
+    num_requested_fu,
+    num_inc_knowledge,
+    federal_month_fiscal_year
+  ) %>% 
+  adorn_totals(
+  )
+
+# Counts that still need to be added include: 
+#Num inc. knowledge
+
+```
+```{r fig-bcr-events-all-grants}
+event_table <- bcr_all_event_topic_current_fp %>%
+  mutate(
+    event_topic_clean = if_else(
+      event_type == "Screening",
+      "All Screening Events",
+      event_topic
+    )
+  ) %>%
+  group_by(event_type, event_topic_clean) %>%
+  summarise(
+    `# Events` = n(),
+    Attendees = sum(total_num_attendees, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(
+    factor(event_type, levels = c("Training", "Screening")),
+    desc(Attendees)
+  ) %>%
+  mutate(
+    `Event Type` = if_else(duplicated(event_type), "", event_type),
+    `Event Topic` = event_topic_clean
+  ) %>%
+  select(
+    `Event Type`,
+    `Event Topic`,
+    `# Events`,
+    Attendees
+  )
+
+event_table_kbl <- event_table %>%
+  knitr::kable(
+    format = "html",
+    align = c("l", "l", "c", "c"),
+    caption = "Events by Type"
+  ) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover")
+  ) %>%
+  kableExtra::row_spec(
+    0,
+    bold = TRUE,
+    background = "#EAF4F8"
+  )
+```
+
+<!-- # SAMHSA -->
+```{r samhsa-counts}
+#SAMHSA TR1 metric for SPARS entry. Total number of individuals who
+#received training. 
+samhsa_tr1 <- bcr_events %>% 
+  filter(
+    pathway_date >= "2026-01-01" &
+    pathway_date <= "2026-03-31"
+  ) %>% 
+  filter(
+    event_grant_description == "SAMHSA",
+  ) %>% 
+  summarise(
+    total_attendees = sum(
+      total_num_attendees, na.rm = TRUE
+    )
+    ) %>% 
+  pull(total_attendees)
+
+
+
+#Need to spend time working with survey data. This is not yet an accurate count.
+#SAMHSA NAB1 Num of Individuals demonstrating improved knowledge,
+#attitudes, beliefs, post training
+ 
+# samhsa_nab1 <- sum(
+#   c(count_inc_knowledge_sh,
+#     count_inc_knowledge_trauma,
+#     count_inc_knowledge_qpr,
+#     # count_inc_knowledge_pastoral
+#     ),
+#   na.rm = TRUE
+# )
+
+
+
+#R1 Total # of individuals connected to MH or a related service. 
+samhsa_bcr_count_rp_by_month <- bcr_full_data %>% 
+  filter(
+    # enrollment_starting_date >= "2026-01-01" &
+    #   enrollment_starting_date <= "2026-03-31" &
+      !is.na(
+        rp_pathway_date
+      )
+  )%>% 
+  tabyl(
+    federal_fiscal_year_qtr_string_referral
+  ) %>% 
+  adorn_totals(
+    "row"
+  ) 
+
+
+samhsa_r1 <- samhsa_bcr_count_rp_by_month %>%
+  filter(federal_fiscal_year_qtr_string_referral == "Total") %>%
+  pull(n)
+
+```
+
+
+
+```{r table-samhsa-metrics}
+samhsa_actuals <- tibble::tribble(
+  ~Outcome, ~Actual,
+  "Number of Individuals Who Completed Mental Health Training", samhsa_tr1,
+  # "Number of Individuals Who Demonstrated Improved Knowledge, Attitudes, or   Beliefs Post-Training", samhsa_nab1,
+  "Individuals Connected to Mental Health or Related Services", samhsa_r1
+) %>% 
+  mutate(
+    Actual = as.numeric(Actual)
+  )
+
+samhsa_goals <- tibble::tribble(
+  ~Outcome, ~`Annual Goal`,
+  "Number of Individuals Who Completed Mental Health Training", 160,
+  "Number of Individuals Who Demonstrated Improved Knowledge, Attitudes, or   Beliefs Post-Training", 128,
+  "Individuals Connected to Mental Health or Related Services",  204
+)
+
+samhsa_results <- samhsa_actuals %>%
+  left_join(samhsa_goals, by = "Outcome") %>%
+  mutate(
+    PctAnnualGoal = scales::percent(Actual / `Annual Goal`, accuracy = 1)
+  )
+
+```
+```{r events-samhsa}
+samhsa_bcr_events <- bcr_events %>% 
+  filter(
+    pathway_date >= params$fiscal_period_start,
+    pathway_date <= params$fiscal_period_end,
+    event_grant_description == "SAMHSA"
+  )
+
+
+samhsa_event_summary <- samhsa_bcr_events %>%
+  group_by(event_topic) %>%
+  summarise(
+    events = n(),                           
+    total_attendees = sum(total_num_attendees, na.rm = TRUE)
+  ) %>%
+  arrange(desc(total_attendees)) 
+
+samhsa_event_summary %>%
+  kable(
+    col.names = c("Event Topic", "Number of Events", "Total Attendees"),
+    align = c("l", "c", "c"),
+    caption = "SAMHSA Q2 Events",
+    booktabs = TRUE
+  ) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  row_spec(0, bold = TRUE) 
+
+```
+
+<!-- # BCR Paid Counseling Sessions{-#BCR Events} -->
+
+```{r bcr-counseling-session-data }
+# Creates a table of all counseling sessions paid for in the current
+# fiscal period by month and grant
+bcr_all_counseling_sessions_current_fy <- bcr_ccs %>% 
+  filter(
+    session_date <= params$end_date &
+      (
+      (session_grant == "ARPA" & session_date >= "2025-11-01" |
+      (session_grant == "DMH"  & session_date >= params$start_date
+     )
+    ) 
+   )
+  )%>%
+ select(
+    ccs_docserno,
+    client_number,
+    ccs_pathway_date,
+    session_date,
+    session_format,
+    session_grant,
+    counseling_agency_description,
+    month_calendar_year_invoice,
+    month_calendar_year_session
+  ) 
+
+blocked_months <- c("Jul 2025", "Aug 2025", "Sep 2025", "Oct 2025")
+
+
+counseling_sessions_by_month <- bcr_all_counseling_sessions_current_fy %>% 
+   filter(
+    session_date >= "2025-07-01"
+  ) %>%
+   mutate(
+    month_order = zoo::as.yearmon(
+      month_calendar_year_session,
+      "%b %Y"
+    )
+  ) %>% 
+mutate(
+    month_calendar_year_session = factor(
+      month_calendar_year_session,
+       levels = (distinct(., month_calendar_year_session, month_order) %>%
+                  arrange(month_order) %>%
+                  pull(month_calendar_year_session)),
+      ordered = TRUE
+    )
+  ) %>%
+  select(
+    -month_order
+    )  %>% 
+  tabyl(
+   session_grant,
+   month_calendar_year_session
+  ) %>% 
+  adorn_totals(
+    c(
+      "row",
+      "col"
+    )
+  ) 
+
+existing_blocked <- intersect(blocked_months, names(counseling_sessions_by_month))
+
+counseling_sessions_by_month %>% 
+  mutate(
+    across(
+      all_of(existing_blocked),
+     ~ if_else(
+        session_grant == "ARPA",
+        NA_real_,
+        .x
+        )
+    )
+  ) %>% 
+  mutate(
+    across(
+      all_of(existing_blocked),
+      ~ if_else(
+        is.na(.x),
+        cell_spec("N/A", color = "#C0C0C0"),
+        as.character(.x)
+      )
+    )
+  )
+       
+
+
+
+#Table of Counseling Sessions by Agency
+bcr_counseling_sessions_by_agency <- bcr_all_counseling_sessions_current_fy %>% 
+  filter(
+       ccs_pathway_date >= "2025-07-01" &
+      ccs_pathway_date <= "2025-12-30"
+  ) %>%  
+  tabyl(
+    counseling_agency_description
+  ) %>% 
+  adorn_totals(
+    c(
+      "row",
+      "col"
+    )
+  ) 
+
+#Creates a table of counseling sessions by client
+bcr_all_counseling_clients_current_fp <- bcr_all_counseling_sessions_current_fy %>% 
+  filter(
+      ccs_pathway_date >= "2025-07-01" &
+      ccs_pathway_date <= "2025-12-30"
+  ) %>%  
+    group_by(
+    client_number
+  ) %>% 
+  summarise(
+    total_sessions = n()
+  ) %>% 
+  adorn_totals(
+    c(
+      "row"
+    )
+  ) 
+
+
+
+count_clients_by_tot_sessions <- bcr_all_counseling_sessions_current_fy %>% 
+  group_by(
+    client_number
+  ) %>% 
+  summarise(
+    total_sessions = n(),
+    .groups = "drop"
+  ) %>% 
+  count(
+    total_sessions,
+    name = "n_clients"
+  ) %>% 
+  arrange(
+    total_sessions
+  ) %>% 
+    adorn_totals(
+    c(
+      "row"
+    )
+  )
+
+#Hash and then create an excel sheet for Dr. Hong
+# bcr_counseling_session_data_to_share <- bcr_all_counseling_clients_current_fp %>% 
+#   left_join(
+#     bcr_full_data %>% 
+#       select(
+#           enroll_client_num,
+#           enrollment_starting_date,
+#           race_description,
+#           gender_description,
+#           ethnicity_description,
+#           birth_date,
+#           zip_code,
+#           phq9_score,
+#           dass_score_ic 
+#       ),
+#     by = c(
+#        "client_number" = "enroll_client_num"
+#   )
+#   )
+# 
+# 
+# 
+# 
+#   set.seed(123)  # reproducibility
+#   bcr_counseling_session_data_to_share <- bcr_counseling_session_data_to_share %>%
+#   mutate(
+#     anon_id = as.integer(factor(client_number, 
+#                                 levels = sample(unique(client_number))))
+#   ) %>% 
+#     relocate(
+#       anon_id,
+#       .before = date_entered
+#     ) %>% 
+#     select(
+#       -client_number
+#     )
+# 
+
+```
+
+```{r tab-bcr-counseling-session-month}
+
+sessions_by_month_tab <- counseling_sessions_by_month%>% 
+  rename(
+    Grant = session_grant
+  ) 
+
+ncol_sessions_by_month_tab <- ncol(sessions_by_month_tab)
+nrow_sessions_by_month_tab <- nrow(sessions_by_month_tab)
+
+sessions_by_month_tab %>% 
+  kable(
+    format = "html",
+    align = c("l", rep("c", ncol(.) - 1)),
+    caption = "<div style='font-weight:600; color:#1F3A5F;'>BCR Funded Counseling Sessions, FY26</div>",
+    escape = FALSE
+  ) %>% 
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "left"
+  ) %>% 
+  row_spec(
+    0,
+    bold = TRUE,
+    background = "#A4E0F4"
+  ) %>% 
+  column_spec(
+    1:ncol_sessions_by_month_tab,
+    width = "8em"
+     ) %>% 
+  row_spec(
+    0:nrow_sessions_by_month_tab,
+    extra_css = "padding-left: 20px;"
+    ) %>% 
+  row_spec(
+    nrow_sessions_by_month_tab,
+    bold = TRUE
+    ) 
+
+sessions_by_month_tab
+```
+
+<!-- # PHQ-9 and DASS-21 Comparison -->
+
+```{r phq-and-dass-comparison, eval = FALSE}
+
+#Currently this is a copy of code from ETO project. Will need to update. 
+bcr_phq_dass_scores <- bcr_ref_ic_rp_parties %>% 
+  select(
+    participant_first_name,
+    participant_last_name,
+    date_taken_referral,
+    case_num,
+    phq_9_score_ic,
+    dass_score_ic,
+    age_referral,
+    race_recode,
+    sex
+  ) %>% 
+  filter(
+    date_taken_referral > "2024-07-01",
+    !is.na(phq_9_score_ic),
+    !is.na(dass_score_ic)
+  )
+
+#Creates an excel file of the phq and dass workbook
+openxlsx::write.xlsx(
+ bcr_phq_dass_scores,
+ file = paste0(
+   "P:/DATA/Data Files/_BCR_data/bcr_phq_dass_scores_",
+   Sys.Date(),
+   ".xlsx"
+ )
+)
+
+bcr_phq_dass_scores_more <- bcr_ref_ic_rp_parties %>% 
+  select(
+    participant_first_name,
+    participant_last_name,
+    date_taken_referral,
+    case_num,
+    phq_9_score_ic,
+    dass_score_ic,
+    age_referral,
+    race_recode,
+    sex,
+    church_home,
+    employment_status_ic,
+    highest_level_ed_completed
+  ) %>% 
+  filter(
+    date_taken_referral > "2024-07-01",
+    !is.na(phq_9_score_ic)
+  )
+
+
+#Creates an excel file of the phq and dass workbook
+openxlsx::write.xlsx(
+ bcr_phq_dass_scores_more,
+ file = paste0(
+   "P:/DATA/Data Files/_BCR_data/bcr_phq_scores_addtl_",
+   Sys.Date(),
+   ".xlsx"
+ )
+)
+
+#Sample with bind_rows() to look at
+# Read data from paper screenings file. Append
+# _nms for "names".
+
+# bcr_january_clients_nms <- names(
+#   read_excel(
+#     "P:/DATA/Data Files/_BCR_data/BCR Screening Data/Paper_screening_results.xlsx",
+#     sheet = "Sheet1",
+#     n_max = 0
+#   )
+# )
+# 
+# # Use case_when() to set col_types for columns that should be numeric, date, and
+# # character data types. The purpose for this is to avoid hard-coding column
+# # types while still providing read_excel() with a vector of col_types. Without
+# # this, read_excel() can take a long time to read in files when there are many
+# # columns with lots of null values, since this tends to thwart read_excel's
+# # column guessing. Append _ct for "column types".
+# bcr_paper_screening_ct <- case_when(
+#   str_detect(
+#     bcr_paper_screening_nms, "Date"
+#   ) ~ "date",
+#   str_detect(
+#     bcr_paper_screening_nms, "age"
+#   ) ~ "numeric",
+#   str_detect(
+#     bcr_paper_screening_nms, "zip_code"
+#   ) ~ "numeric",
+#   str_detect(
+#     bcr_paper_screening_nms, "total_score"
+#   ) ~ "numeric",
+#    str_detect(
+#     bcr_paper_screening_nms, "little_interest"
+#   ) ~ "numeric",
+#   str_detect(
+#     bcr_paper_screening_nms, "feeling_down"
+#   ) ~ "numeric",   
+#   str_detect(
+#     bcr_paper_screening_nms, "trouble_sleep"
+#   ) ~ "numeric",   
+#   str_detect(
+#     bcr_paper_screening_nms, "feeling_tired"
+#   ) ~ "numeric",   
+#   str_detect(
+#     bcr_paper_screening_nms, "poor_eating"
+#   ) ~ "numeric",   
+#   str_detect(
+#     bcr_paper_screening_nms, "bad_about_self"
+#   ) ~ "numeric",   
+#   str_detect(
+#     bcr_paper_screening_nms, "trouble_concentrating"
+#   ) ~ "numeric",
+#   str_detect(
+#     bcr_paper_screening_nms, "moving_slow_or_fast"
+#   ) ~ "numeric",   
+#   str_detect(
+#     bcr_paper_screening_nms, "thoughts_of_death"
+#   ) ~ "numeric",
+#   .default = "text"
+# )
+# 
+# # Rename columns to reflect the questions.Calculate individual change 
+# # scores based on prior and now responses and then calculate total change score.
+# #Use pivot_wider() to create one row per Wellness Champion
+# 
+# bcr_paper_screenings_fy24 <- read_excel(
+#   "P:/DATA/Data Files/_BCR_data/BCR Screening Data/Paper_screening_results.xlsx",
+#     sheet = "Sheet1",
+#   col_types = bcr_paper_screening_ct,
+#   na = c(
+#     "",
+#     " "
+#   )
+# )
+# 
+# #Append paper and virtual screening data
+# bcr_screenings_fy24 <- bind_rows(
+#   bcr_virtual_screenings_fy24,
+#   bcr_paper_screenings_fy24
+
+```
+<!-- # Annual Report -->
+``` {r bcr-trends-for-annual}
+# create your table
+referrals_by_year <- data.frame(
+  FiscalYear = c("FY23", "FY24", "FY25"),
+  Referrals = c(174, 207, 347)
+) %>% 
+  mutate(
+    FiscalYear = factor(FiscalYear)
+  )
+
+# look at the table
+referrals_by_year
+
+
+library(ggplot2)
+
+ref_by_year_bump_chart <- ggplot(referrals_by_year, aes(x = FiscalYear, y = Referrals, group = 1)) +
+  geom_line(color = "steelblue", size = 1.4) +
+  geom_point(size = 5.5, color = "steelblue") +
+  geom_text(
+    aes(label = Referrals),
+    vjust = -1, size = 4.5, color = "black"
+  ) +
+  labs(
+    title = "Referrals to BCR by Fiscal Year",
+    x = NULL,
+    y = NULL
+  ) +
+  scale_y_continuous(
+    limits = c(50, NA),
+    expand = expansion(mult = c(0, .15)),
+    labels = NULL
+  ) +
+  # scale_x_discrete(
+  #   expand = expansion(add = c(0, 0))
+  # )+
+  theme_minimal()+
+  theme(
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5),
+    axis.text.x = element_text(size = 11, face = "bold"), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(t = 20, r = 20, b = 25, l = 20)
+    ) +
+  annotate(
+    "text", 
+    x = 2.95,
+    y = 230,
+    label = "↑ 99% increase \nsince FY23",
+    size = 4.5,
+    color = "steelblue",
+    fontface = "bold"
+          )
+
+
+
+ref_by_year_bump_chart
+
+ggsave(
+  "ref_by_year_bump_chart.jpeg"
+)
+
+
+#Quick Tests
+
+ref_source_explore <- bcr_full_data %>% 
+  filter(
+    ref_pathway_date >= "2025-10-01" &
+    ref_pathway_date <= "2025-12-31",
+    ref_source_type == "Community Member" |
+    ref_source_type == "Other"
+  ) %>% 
+  select(
+    enrollment_starting_date,
+    method_referral,
+    ref_source_type,
+    other_referral_source_type,
+    how_hear_about_bcr,
+    planned_event,
+    event_type,
+    event_type_other
+  )
+
+```
+
+## Engagements by Month & County {.unnumbered}
+
+:::::::::: columns
+::: {.column width="50%" style="padding-right: 1.5rem;"}
+
+::: {.quarto-figure}
+```{r}
+#| include: true
+
+fig_ref_by_month_county
+```
+:::
+
+:::
+
+::: {.column width="50%"}
+
+::: {.quarto-figure}
+```{r}
+#| include: true
+#| fig-cap: Presenting Concerns at Referral
+
+fig_bcr_pc
+```
+:::
+
+:::
+::::::::::
+
+## Referrals Placed by Type & Subtype {.unnumbered}
+
+:::::::::: columns
+
+::: {.column width="50%" style="padding-right: 1.5rem;"}
+
+::: {.quarto-figure}
+```{r}
+#| include: true
+bcr_fig_rp_type_subtypes
+```
+:::
+
+:::
+
+::: {.column width="50%" .small}
+
+```{r}
+#| include: true
+#| tbl-cap: Mental Health Screening & Training Events
+event_table_kbl
+```
+
+:::
+
+::::::::::
+
+## Events
+

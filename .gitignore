@@ -39,11 +39,70 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# pkgdown site
-docs/
+# Rmarkdown and bookdown files
+_book
+_bookdown_files
 
-# translation temp files
-po/*~
+# Core LaTeX temporary, auxiliary files
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+*.lb
 
-# RStudio Connect folder
-rsconnect/
+# LaTeX Beamer
+*.snm
+*.pre
+*.vrb
+*.nav
+*.out
+
+## TeX build tool auxiliary files
+*.fdb_latexmk
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+
+# Bibliography auxiliary files (bibtex/biblatex/biber)
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+
+# Output files
+*.pdf
+*.doc
+*.docx
+*.xlsx
+*.xls
+*.csv
+*.ppt
+*.png
+*.jpg
+*.html
+*.tex
+
+# Quarto intermediate files
+*.html.md
+*.pdf.md
+*.qmd.json
+*.upa
+*.upb
+
+# Quarto freeze artifacts (if freeze is used)
+_freeze/
+
+/.quarto/
+**/*.quarto_ipynb
+.positai

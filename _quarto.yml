@@ -1,0 +1,46 @@
+project:
+  title: "BCR Quarterly Infographic Brief"
+  type: default
+  resources:
+    - styles/
+    - assets/
+
+format:
+  html:
+    theme: styles/report-html.scss
+    css: 
+      - styles/fontawesome/css/all.min.css
+    output-dir: _output/html
+    toc: false
+    page-layout: full
+    smooth-scroll: true
+    embed-resources: true
+    pdf-engine: chromium
+
+  pdf:
+    documentclass: article
+    geometry: "margin=0.75in"
+    keep-tex: false
+    output-dir: _output/pdf
+    toc: false
+    number-sections: false
+    include-in-header: styles/latex-preamble.tex
+
+params:
+  program: "<program>"
+  report_date: "2026-01-01"
+  period: "quarter"
+  start_date: "2026-01-01"
+  end_date: "2026-03-31"
+  fiscal_period_start: "2026-01-01"
+  fiscal_period_end: "2026-03-31"
+
+execute:
+  echo: false
+  warning: false
+  message: false
+  include: false
+
+extensions:
+  - shafayetShafee/bsicons
+#  - filter/your-filter.lua (placeholder in case a filter is added)
