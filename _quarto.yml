@@ -18,13 +18,8 @@ format:
     pdf-engine: chromium
 
   pdf:
-    documentclass: article
-    geometry: "margin=0.75in"
-    keep-tex: false
+    pdf-engine: pagedjs-cli
     output-dir: _output/pdf
-    toc: false
-    number-sections: false
-    include-in-header: styles/latex-preamble.tex
 
 params:
   program: "<program>"
