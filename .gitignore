@@ -1,49 +1,83 @@
-# History files
+# ============================================================
+# 1. Quarto artifacts (HTML/PDF/etc.)
+# ============================================================
+_site/
+_book/
+.quarto/
+site_libs/
+**/libs/
+html_test_files/
+
+# Per-document intermediates
+*.qmd.json
+*.html.json
+*.knit.md
+*.utf8.md
+*_cache/
+
+# Common rendered outputs
+*.pdf
+*.docx
+
+# Ignore HTML everywhere except rendered output directory
+*.html
+!_output/html/*.html
+
+# ============================================================
+# 2. ETL intermediate data (cache outputs)
+# ============================================================
+data_intermediate/*
+!data_intermediate/.gitkeep
+
+# ============================================================
+# 3. R / RStudio artifacts
+# ============================================================
 .Rhistory
 .Rapp.history
-
-# Session Data files
 .RData
 .RDataTmp
-
-# User-specific files
 .Ruserdata
+.Rproj.user/
+.Renviron
+
+# R CMD build/check outputs
+/*.tar.gz
+/*.Rcheck/
 
 # Example code in package build process
 *-Ex.R
 
-# Output files from R CMD build
-/*.tar.gz
-
-# Output files from R CMD check
-/*.Rcheck/
-
-# RStudio files
-.Rproj.user/
-
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
-
-# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
-.httr-oauth
+# R Markdown / Bookdown
+_bookdown_files/
+_book/
 
 # knitr and R markdown default cache directories
 *_cache/
 /cache/
 
-# Temporary files created by R markdown
-*.utf8.md
-*.knit.md
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
 
-# R Environment Variables
-.Renviron
+# OAuth2 token
+.httr-oauth
 
-# Rmarkdown and bookdown files
-_book
-_bookdown_files
+# ============================================================
+# 4. Python artifacts
+# ============================================================
+__pycache__/
+.ipynb_checkpoints/
+.env/
+.venv/
 
-# Core LaTeX temporary, auxiliary files
+# ============================================================
+# 5. Editor artifacts
+# ============================================================
+.vscode/
+
+# ============================================================
+# 6. LaTeX auxiliary files
+# ============================================================
 *.aux
 *.lof
 *.log
@@ -57,22 +91,20 @@ _bookdown_files
 *.cb2
 *.lb
 
-# LaTeX Beamer
+# Beamer
 *.snm
 *.pre
 *.vrb
 *.nav
-*.out
 
-## TeX build tool auxiliary files
+# Latexmk / Synctex
 *.fdb_latexmk
-*.synctex
-*.synctex(busy)
-*.synctex.gz
-*.synctex.gz(busy)
+*.synctex*
 *.pdfsync
 
-# Bibliography auxiliary files (bibtex/biblatex/biber)
+# ============================================================
+# 7. Bibliography auxiliary files
+# ============================================================
 *.bbl
 *.bcf
 *.blg
@@ -80,29 +112,29 @@ _bookdown_files
 *-blx.bib
 *.run.xml
 
-# Output files
-*.pdf
+# ============================================================
+# 8. Miscellaneous outputs
+# ============================================================
 *.doc
-*.docx
 *.xlsx
 *.xls
 *.csv
 *.ppt
-*.png
 *.jpg
-*.html
 *.tex
 
-# Quarto intermediate files
-*.html.md
-*.pdf.md
-*.qmd.json
-*.upa
-*.upb
+# ============================================================
+# 9. PNG handling
+# ============================================================
+*.png
+!images/*.png
 
-# Quarto freeze artifacts (if freeze is used)
+# ============================================================
+# 10. Quarto freeze artifacts
+# ============================================================
 _freeze/
 
-/.quarto/
-**/*.quarto_ipynb
+# ============================================================
+# 11. Posit AI files
+# ============================================================
 .positai
